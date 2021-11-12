@@ -178,13 +178,25 @@ export class Timer {
     getTotalModeMillisecs(): number {
         switch (this.mode) {
             case Mode.Pomo: {
-                return this.settings.pomo * MILLISECS_IN_MINUTE;
+                if (this.settings.pomo === 1) {
+                    return MILLISECS_IN_MINUTE / 30; //Do a quick 2 seconds for testing if set to 1 minute
+                } else {
+                    return this.settings.pomo * MILLISECS_IN_MINUTE;
+                }
             }
             case Mode.ShortBreak: {
-                return this.settings.shortBreak * MILLISECS_IN_MINUTE;
+                if (this.settings.shortBreak === 1) {
+                    return MILLISECS_IN_MINUTE / 30; //Do a quick 2 seconds for testing if set to 1 minute
+                } else {
+                    return this.settings.shortBreak * MILLISECS_IN_MINUTE;
+                }
             }
             case Mode.LongBreak: {
-                return this.settings.longBreak * MILLISECS_IN_MINUTE;
+                if (this.settings.longBreak === 1) {
+                    return MILLISECS_IN_MINUTE / 30; //Do a quick 2 seconds for testing if set to 1 minute
+                } else {
+                    return this.settings.longBreak * MILLISECS_IN_MINUTE;
+                }
             }
             case Mode.NoTimer: {
                 throw new Error("Mode NoTimer does not have an associated time value");

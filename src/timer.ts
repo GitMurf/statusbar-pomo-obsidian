@@ -280,7 +280,7 @@ export class Timer {
                 await this.plugin.app.vault.create(this.settings.logFile, "");
             }
 
-            await this.appendFile(this.settings.logFile, logText);
+            await this.prependFile(this.settings.logFile, logText);
         }
     }
 
@@ -288,9 +288,17 @@ export class Timer {
     async appendFile(filePath: string, note: string): Promise<void> {
         let existingContent = await this.plugin.app.vault.adapter.read(filePath);
         if (existingContent.length > 0) {
-            existingContent = existingContent + '\r';
+            existingContent = existingContent + '\n';
         }
         await this.plugin.app.vault.adapter.write(filePath, existingContent + note);
+    }
+
+    async prependFile(filePath: string, note: string): Promise<void> {
+        let existingContent = await this.plugin.app.vault.adapter.read(filePath);
+        if (existingContent.length > 0) {
+            existingContent = '\n' + existingContent;
+        }
+        await this.plugin.app.vault.adapter.write(filePath, `${note}${existingContent}`);
     }
 }
 

@@ -217,12 +217,17 @@ export class PomoSettingTab extends PluginSettingTab {
 
                     }));
 
-
+            const defaultFormatText = `🍅 [[{DATE}]] - {TIME} - {LINK}{NEWLINE}`;
+            if (this.plugin.settings.logText === `` || !this.plugin.settings.logText) {
+                this.plugin.settings.logText = defaultFormatText;
+                this.plugin.saveSettings();
+            }
             new Setting(containerEl)
                 .setName("Timestamp Format")
-                .setDesc("Specify format for the logtext using moment syntax")
+                .setDesc("Placeholders: {DATE} {TIME} {LINK} {NEWLINE}")
                 .addMomentFormat(text => text
-                    .setDefaultFormat(this.plugin.settings.logText)
+                    .setDefaultFormat(defaultFormatText)
+                    .setValue(this.plugin.settings.logText)
                     .onChange(value => {
                         this.plugin.settings.logText = value;
                         this.plugin.saveSettings();

@@ -262,12 +262,10 @@ export class Timer {
             linkNote = this.plugin.app.fileManager.generateMarkdownLink(this.activeNote, '');
         }
         let logText = this.settings.logText;
-        console.log(logText);
         logText = logText.replace(/\{DATE\}/g, dtFormat);
         logText = logText.replace(/\{TIME\}/g, tmFormat);
         logText = logText.replace(/\{LINK\}/g, linkNote);
         logText = logText.replace(/\{NEWLINE\}/g, '\n');
-        console.log(logText);
 
         if (this.settings.logToDaily === true) { //use today's note
             let file = (await getDailyNoteFile()).path;

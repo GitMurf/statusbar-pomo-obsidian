@@ -39,7 +39,7 @@ export default class PomoTimerPlugin extends Plugin {
 
 		addIcon("feather-play", feather.icons.play.toString());
 		addIcon("feather-pause", feather.icons.pause.toString());
-		addIcon("feather-quit", feather.icons.x.toSvg({viewBox: "0 0 24 24", width: "100", height: "100"}).toString()); //https://github.com/phibr0/obsidian-customizable-sidebar/blob/master/src/ui/icons.ts
+        addIcon("feather-quit", feather.icons.x.toSvg({ viewBox: "0 0 24 24", width: "100", height: "100" }).toString()); //https://github.com/phibr0/obsidian-customizable-sidebar/blob/master/src/ui/icons.ts
 
 		this.addCommand({
 			id: 'start-satusbar-pomo',
@@ -93,10 +93,17 @@ export default class PomoTimerPlugin extends Plugin {
 
 	//on click, open log file; from Day Planner https://github.com/lynchjames/obsidian-day-planner/blob/c8d4d33af294bde4586a943463e8042c0f6a3a2d/src/status-bar.ts#L53
 	openLogFileOnClick() {
-		this.statusBar.addClass("statusbar-pomo-logging");
-
+        this.statusBar.addClass("statusbar-pomo-logging");
 		this.statusBar.onClickEvent(async (ev: any) => {
 			if (this.settings.logging === true) { //this is hacky, ideally I'd just unwatch the onClickEvent as soon as I turned logging off
+                //SPM added
+                if (this.timer) {
+                    if (this.timer.mode !== Mode.NoTimer) {
+                        this.timer.togglePause();
+                    }
+                }
+
+				/*
 				try {
 					var file: string;
 					if (this.settings.logToDaily === true) {
@@ -104,11 +111,12 @@ export default class PomoTimerPlugin extends Plugin {
 					} else {
 						file = this.settings.logFile;
 					}
-	
+
 					this.app.workspace.openLinkText(file, '', false);
 				} catch (error) {
 					console.log(error);
 				}
+				*/
 			}
 		});
 	}
@@ -116,7 +124,7 @@ export default class PomoTimerPlugin extends Plugin {
 	/**************  Meta  **************/
 
 	onunload() {
-		this.timer.quitTimer();
+        if (this.timer) { this.timer.quitTimer(); }
 		console.log('Unloading status bar pomodoro timer');
 	}
 

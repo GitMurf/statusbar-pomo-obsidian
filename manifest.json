@@ -1,7 +1,7 @@
 {
-	"id": "obsidian-statusbar-pomo",
-	"name": "Status Bar Pomodoro Timer",
-	"version": "0.1.11",
+	"id": "obsidian-statusbar-pomo-fork",
+	"name": "Status Bar Pomodoro Timer (Murf)",
+	"version": "0.1.11.1",
 	"minAppVersion": "0.9.12",
 	"description": "Adds a pomodoro timer to your status bar.",
 	"author": "kzhovn",

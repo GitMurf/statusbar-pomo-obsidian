@@ -62,7 +62,9 @@ export class Timer {
 			else if (moment().isSameOrAfter(this.endTime)) {
 				await this.handleTimerEnd();
 			}
-
+            if (this.mode === Mode.ShortBreak || this.mode === Mode.LongBreak) {
+                return `B: ${millisecsToString(this.getCountdown())}`;
+            }
 			return millisecsToString(this.getCountdown()); //return display value
 		} else {
 			return ""; //fixes TypeError: failed to execute 'appendChild' on 'Node https://github.com/kzhovn/statusbar-pomo-obsidian/issues/4
@@ -226,12 +228,12 @@ export class Timer {
 	modeRestartingNotification(): void {
 		switch (this.mode) {
 			case (Mode.Pomo): {
-				new Notice(`Restarting pomodoro.`);
+                new Notice(`Resuming pomodoro timer`);
 				break;
 			}
 			case (Mode.ShortBreak):
 			case (Mode.LongBreak): {
-				new Notice(`Restarting break.`);
+                new Notice(`Resuming break`);
 				break;
 			}
 		}

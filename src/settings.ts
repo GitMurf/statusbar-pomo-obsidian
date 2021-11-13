@@ -224,14 +224,16 @@ export class PomoSettingTab extends PluginSettingTab {
             }
             new Setting(containerEl)
                 .setName("Timestamp Format")
-                .setDesc("Placeholders: {DATE} {TIME} {LINK} {NEWLINE}")
-                .addMomentFormat(text => text
-                    .setDefaultFormat(defaultFormatText)
-                    .setValue(this.plugin.settings.logText)
-                    .onChange(value => {
+                .setDesc("Placeholders: {DATE} {TIME} {LINK} {DESC} {NEWLINE}")
+                .addText(text => {
+                    text.setPlaceholder(defaultFormatText);
+                    text.setValue(this.plugin.settings.logText);
+                    text.onChange(value => {
                         this.plugin.settings.logText = value;
                         this.plugin.saveSettings();
-                    }));
+                    });
+                    text.inputEl.style.width = '500px';
+                });
 
             new Setting(containerEl)
                 .setName("Log active note")

@@ -1,4 +1,4 @@
-import { Notice, moment, TFolder, TFile } from 'obsidian';
+import { Notice, moment, TFolder, TFile, Modal, App, SuggestModal } from 'obsidian';
 import { getDailyNote, createDailyNote, getAllDailyNotes } from 'obsidian-daily-notes-interface';
 import type { Moment } from 'moment';
 import { notificationUrl, whiteNoiseUrl } from './audio_urls';
@@ -15,6 +15,59 @@ export const enum Mode {
     NoTimer
 }
 
+abstract class inputModal extends SuggestModal<string> {
+    constructor(app: App) {
+        super(app);
+        this.setPlaceholder("Enter a short description for what you are working on...");
+        /*
+        this.setInstructions([
+            { command: 'Plain Text: ', purpose: 'No [[Page]] or #Tag required' },
+        ]);
+        */
+    }
+
+    onOpen() {
+        let modalBg: HTMLElement = document.querySelector('.modal-bg');
+        modalBg.style.backgroundColor = '#00000029';
+        let modalPrompt: HTMLElement = document.querySelector('.prompt');
+        modalPrompt.style.border = '1px solid #483699';
+        let modalInput: any = modalPrompt.querySelector('.prompt-input');
+        modalInput.focus();
+        modalInput.select();
+    }
+
+    getSuggestions(query: string): string[] {
+        return [query];
+    }
+
+    renderSuggestion(value: string, el: HTMLElement): void {
+        el.innerText = value;
+    }
+}
+
+class TaskModal extends inputModal {
+    constructor(app: App, private pomoPlugin: PomoTimerPlugin) {
+        super(app);
+    }
+
+    onChooseSuggestion(item: string, _: MouseEvent | KeyboardEvent): void {
+        this.pomoPlugin.timer.taskDescription = item;
+        this.pomoPlugin.timer.startTimer(Mode.Pomo);
+    }
+}
+
+async function waitForTaskModal(
+    thisApp: App,
+    thisPlugin: PomoTimerPlugin
+): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        const modal = new TaskModal(thisApp, thisPlugin);
+        modal.onClose = () => {
+            resolve(true);
+        };
+        modal.open();
+    });
+}
 
 export class Timer {
     plugin: PomoTimerPlugin;
@@ -28,6 +81,8 @@ export class Timer {
     cyclesSinceLastAutoStop: number;
     activeNote: TFile;
     whiteNoisePlayer: WhiteNoise;
+    taskDescription: string;
+    isModalOpen: boolean;
 
     constructor(plugin: PomoTimerPlugin) {
         this.plugin = plugin;
@@ -36,15 +91,21 @@ export class Timer {
         this.paused = false;
         this.pomosSinceStart = 0;
         this.cyclesSinceLastAutoStop = 0;
+        this.taskDescription = '';
+        this.isModalOpen = false;
 
         if (this.settings.whiteNoise === true) {
             this.whiteNoisePlayer = new WhiteNoise(plugin, whiteNoiseUrl);
         }
     }
 
-    onRibbonIconClick() {
+    async onRibbonIconClick() {
         if (this.mode === Mode.NoTimer) {  //if starting from not having a timer running/paused
-            this.startTimer(Mode.Pomo);
+            if (this.plugin.settings.logText.indexOf(`{DESC}`) > -1) {
+                await waitForTaskModal(this.plugin.app, this.plugin);
+            } else {
+                this.startTimer(Mode.Pomo);
+            }
         } else { //if timer exists, pause or unpause
             this.togglePause();
         }
@@ -53,21 +114,24 @@ export class Timer {
     /*Set status bar to remaining time or empty string if no timer is running*/
     //handling switching logic here, should spin out
     async setStatusBarText(): Promise<string> {
-        if (this.mode !== Mode.NoTimer) {
-            if (this.paused === true) {
-                return millisecsToString(this.pausedTime); //just show the paused time
+        if (!this.isModalOpen) {
+            if (this.mode !== Mode.NoTimer) {
+                if (this.paused === true) {
+                    return millisecsToString(this.pausedTime); //just show the paused time
+                }
+                /*if reaching the end of the current timer, end of current timer*/
+                else if (moment().isSameOrAfter(this.endTime)) {
+                    await this.handleTimerEnd();
+                }
+                if (this.mode === Mode.ShortBreak || this.mode === Mode.LongBreak) {
+                    return `B: ${millisecsToString(this.getCountdown())}`;
+                }
+                return millisecsToString(this.getCountdown()); //return display value
+            } else {
+                return ""; //fixes TypeError: failed to execute 'appendChild' on 'Node https://github.com/kzhovn/statusbar-pomo-obsidian/issues/4
             }
-
-            /*if reaching the end of the current timer, end of current timer*/
-            else if (moment().isSameOrAfter(this.endTime)) {
-                await this.handleTimerEnd();
-            }
-            if (this.mode === Mode.ShortBreak || this.mode === Mode.LongBreak) {
-                return `B: ${millisecsToString(this.getCountdown())}`;
-            }
-            return millisecsToString(this.getCountdown()); //return display value
         } else {
-            return ""; //fixes TypeError: failed to execute 'appendChild' on 'Node https://github.com/kzhovn/statusbar-pomo-obsidian/issues/4
+            return "";
         }
     }
 
@@ -94,7 +158,14 @@ export class Timer {
                 this.startTimer(Mode.ShortBreak);
             }
         } else { //short break. long break, or no timer
-            this.startTimer(Mode.Pomo);
+            if (this.plugin.settings.logText.indexOf(`{DESC}`) > -1) {
+                this.isModalOpen = true;
+                await waitForTaskModal(this.plugin.app, this.plugin);
+                this.cyclesSinceLastAutoStop = 0;
+                this.isModalOpen = false;
+            } else {
+                this.startTimer(Mode.Pomo);
+            }
         }
 
         if (this.settings.autostartTimer === false && this.settings.numAutoCycles <= this.cyclesSinceLastAutoStop) { //if autostart disabled, pause and allow user to start manually
@@ -104,6 +175,8 @@ export class Timer {
     }
 
     async quitTimer(): Promise<void> {
+        clearInterval(this.plugin.statusIntervalId);
+        this.plugin.statusIntervalId = null;
         this.mode = Mode.NoTimer;
         this.startTime = moment(0);
         this.endTime = moment(0);
@@ -114,6 +187,7 @@ export class Timer {
             this.whiteNoisePlayer.stopWhiteNoise();
         }
 
+        this.plugin.statusBar.setText(await this.setStatusBarText());
         await this.plugin.loadSettings(); //why am I loading settings on quit? to ensure that when I restart everything is correct? seems weird
     }
 
@@ -148,6 +222,12 @@ export class Timer {
     startTimer(mode: Mode): void {
         this.mode = mode;
         this.paused = false;
+        if (!this.plugin.statusIntervalId) {
+            //Update status bar timer ever half second
+            const intervalId = window.setInterval(async () => this.plugin.statusBar.setText(await this.setStatusBarText()), 500);
+            this.plugin.registerInterval(intervalId);
+            this.plugin.statusIntervalId = intervalId;
+        }
 
         if (this.settings.logActiveNote === true) {
             const activeView = this.plugin.app.workspace.getActiveFile();
@@ -266,6 +346,8 @@ export class Timer {
         logText = logText.replace(/\{TIME\}/g, tmFormat);
         logText = logText.replace(/\{LINK\}/g, linkNote);
         logText = logText.replace(/\{NEWLINE\}/g, '\n');
+        logText = logText.replace(/\{DESC\}/g, this.taskDescription);
+        this.taskDescription = ``;
 
         if (this.settings.logToDaily === true) { //use today's note
             let file = (await getDailyNoteFile()).path;

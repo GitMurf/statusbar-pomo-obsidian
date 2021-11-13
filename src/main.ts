@@ -8,6 +8,7 @@ export default class PomoTimerPlugin extends Plugin {
     settings: PomoSettings;
     statusBar: HTMLElement;
     timer: Timer;
+    statusIntervalId: number;
 
     async onload() {
         console.log('Loading status bar pomodoro timer');
@@ -27,15 +28,9 @@ export default class PomoTimerPlugin extends Plugin {
           if no timer is currently running, and otherwise quits current timer*/
         if (this.settings.ribbonIcon === true) {
             this.addRibbonIcon('clock', 'Start pomodoro', async () => {
-                this.timer.onRibbonIconClick();
+                await this.timer.onRibbonIconClick();
             });
         }
-
-        /*Update status bar timer ever half second
-          Ideally should change so only updating when in timer mode
-          - regular conditional doesn't remove after quit, need unload*/
-        this.registerInterval(window.setInterval(async () =>
-            this.statusBar.setText(await this.timer.setStatusBarText()), 500));
 
         addIcon("feather-play", feather.icons.play.toString());
         addIcon("feather-pause", feather.icons.pause.toString());
